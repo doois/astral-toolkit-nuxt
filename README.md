@@ -113,6 +113,11 @@ Decisões, ditas com clareza:
 - **Estático é arquivo.** Depois do build, um endereço de rota `static` que não foi
   pré-renderizado é 404 direto (sem consultar o CMS), como num host estático e como no
   toolkit Astro. No `npm run dev` tudo renderiza sob demanda.
+- **CMS fora do ar não derruba o site.** As respostas do CMS ficam em memória
+  (`server/lib/memo.ts`, 5 minutos, purgadas pelo webhook) e a última resposta boa de
+  cada consulta é guardada à parte. Se o CMS falhar (rede, 5xx depois das novas
+  tentativas do cliente), o site serve essa resposta e tenta de novo 30 segundos
+  depois; só dá erro uma consulta que nunca carregou desde que o processo subiu.
 - **404 não entra em cache.** Os cabeçalhos de `revalidate` e `dynamic` são definidos
   pela página só quando ela renderiza; um 404 sai sem cache compartilhado.
 - Uma página `static` que embute conteúdo de um tipo `revalidate` (a home com a lista
