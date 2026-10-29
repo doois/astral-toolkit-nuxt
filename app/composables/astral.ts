@@ -12,12 +12,12 @@ export async function useAstralPage() {
   const nuxtApp = useNuxtApp();
   const route = useRoute();
   const site = routeById(config, route.name);
-  if (!site) throw createError({ statusCode: 404, fatal: true });
+  if (!site) throw createError({ statusCode: 404, statusMessage: "Not Found" });
 
   // A static route is files after the build: an address under it that was not prerendered is a 404
   // (like a static host), not a render on demand. Dev renders everything; the prerenderer sends x-nitro-prerender.
   const prerendering = !!useRequestHeader("x-nitro-prerender");
-  if (import.meta.server && !import.meta.dev && site.mode === "static" && !prerendering) throw createError({ statusCode: 404, fatal: true });
+  if (import.meta.server && !import.meta.dev && site.mode === "static" && !prerendering) throw createError({ statusCode: 404, statusMessage: "Not Found" });
 
   const param = (name: string) => (typeof route.params[name] === "string" ? (route.params[name] as string) : undefined);
   const { data, error } = await useFetch<PageResult>("/api/astral/page", {
@@ -26,7 +26,7 @@ export async function useAstralPage() {
   });
   if (error.value) throw createError({ statusCode: error.value.statusCode ?? 500, statusMessage: error.value.statusMessage, fatal: true });
   const result = data.value;
-  if (!result || result.kind === "notFound") throw createError({ statusCode: 404, fatal: true });
+  if (!result || result.kind === "notFound") throw createError({ statusCode: 404, statusMessage: "Not Found" });
   if (result.kind === "redirect") {
     await nuxtApp.runWithContext(() => navigateTo(result.to, { redirectCode: 301, external: /^https?:\/\//.test(result.to) }));
     return null;
