@@ -1,0 +1,13 @@
+node_modules/
+.nuxt/
+.output/
+dist
+.data/
+.nitro/
+.cache/
+.env
+.env.*
+!.env.example
+.lighthouseci/
+*.log
+.DS_Store

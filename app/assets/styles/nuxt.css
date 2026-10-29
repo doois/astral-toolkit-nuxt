@@ -1,0 +1,6 @@
+/* Nuxt renders the app inside <div id="__nuxt">. The shared stylesheet lays the
+   page out on <body> (flex column, main grows, footer at the end), so the
+   wrapper steps out of the layout and its children sit on <body> directly. */
+#__nuxt {
+  display: contents;
+}
