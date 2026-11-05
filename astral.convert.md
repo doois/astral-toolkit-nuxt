@@ -116,3 +116,5 @@ toolkit); keep them when restyling. No em dashes in UI text.
 The Content-Security-Policy (`server/lib/csp.ts`) allows no inline JavaScript: no
 `innerHTML` scripts in `useHead`, no `onclick`, no third-party origins unless
 added there. Styles may be inline.
+
+Converted sites keep the live edit wiring of the preview: `app/pages/preview.vue` loads the CMS agent and `modules/astral.ts` opens only that route to the CMS.

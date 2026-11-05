@@ -22,8 +22,7 @@ export default defineNuxtConfig({
     compressPublicAssets: false,
     prerender: { crawlLinks: false, failOnError: true },
     routeRules: {
-      // The site's own on-demand routes: never prerendered.
-      "/preview": { prerender: false },
+      // The site's own on-demand routes: never prerendered (/preview is in modules/astral.ts, with its policy; a rule here would replace that one).
       "/api/**": { prerender: false },
       // Fonts are not hashed: a week, so a swapped file still reaches visitors. Hashed build assets (/_nuxt) get a year from Nitro.
       "/fonts/**": { headers: { "cache-control": "public, max-age=604800" } },

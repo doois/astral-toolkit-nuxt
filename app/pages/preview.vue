@@ -2,7 +2,8 @@
 // Draft preview. The editor's "Preview" button opens this address with a signed
 // token (the project's preview URL is "<site>/preview?token={token}"); the token
 // is traded for the draft at the CMS, no API key involved. Never cached, never
-// indexed, and the page says it is a draft.
+// indexed, and the page says it is a draft. The CMS's live edit agent rides along:
+// the admin frames this page and the agent finds the fields by value (README).
 import type { PreviewResult } from "#shared/site/content";
 import { t } from "#shared/site/i18n";
 import EntryTemplate from "../components/templates/EntryTemplate.vue";
@@ -17,7 +18,8 @@ if (import.meta.server) {
   useResponseHeader("x-robots-tag").value = "noindex, nofollow";
   if (!result.ok) setResponseStatus(useRequestEvent()!, 401);
 }
-if (!result.ok) useHead({ htmlAttrs: { lang: "pt-BR" }, title: "Preview", meta: [{ name: "robots", content: "noindex" }] });
+if (result.ok) useHead({ script: [{ key: "astral-live-edit", src: result.agent, defer: true }] });
+else useHead({ htmlAttrs: { lang: "pt-BR" }, title: "Preview", meta: [{ name: "robots", content: "noindex" }] });
 </script>
 
 <template>

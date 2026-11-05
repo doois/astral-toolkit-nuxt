@@ -47,4 +47,4 @@ export type PageResult =
   | { kind: "redirect"; to: string };
 
 /** The answer of GET /api/astral/preview. */
-export type PreviewResult = { ok: true; page: EntryView; site: SiteData } | { ok: false; problem: string };
+export type PreviewResult = { ok: true; page: EntryView; site: SiteData; agent: string } | { ok: false; problem: string };

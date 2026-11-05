@@ -179,6 +179,23 @@ base-uri 'self'; object-src 'none'
 - Vídeos do YouTube ou Vimeo (`frame-src`), `<video>` do CMS (`media-src`) e serviços de
   terceiros (analytics, mapas) precisam da origem acrescentada em `server/lib/csp.ts`.
 
+### Editar no site
+
+O "Editar no site" do CMS abre o rascunho num frame do admin, e um agente dentro da página
+acha os campos pelo valor: os templates não precisam de marcação nem de atributos. Só a
+pré-visualização muda, as páginas publicadas continuam com a política acima:
+
+- O documento carrega `<script src="<origem do ASTRAL_URL>/live-edit.js" defer></script>`.
+  Fora do frame do admin esse script não faz nada. Ele só atende a própria origem, então
+  `ASTRAL_URL` precisa ser o endereço em que o admin abre.
+- A política ganha a origem do CMS em `script-src` e vira `frame-ancestors 'self' <origem do CMS>`.
+  O resto é igual (`server/lib/csp.ts`).
+- É uma route rule de `/preview`, decidida no build como a de `/**`: o `ASTRAL_URL` do build e o do
+  container precisam ser iguais. O agente é um arquivo externo, que o `noScripts` mantém.
+- O toolkit não envia `X-Frame-Options`. Um proxy na frente não pode enviar esse cabeçalho, nem
+  somar outra `Content-Security-Policy`, nessas respostas: as políticas se somam e a mais fechada vence.
+- Hospedagem estática: sem servidor não há `/preview`, logo não há editar no site. O `_headers` continua só com a política publicada; para editar no site o projeto precisa do servidor Node.
+
 ## Revalidação, purga e rebuild
 
 O CMS chama `POST /api/astral/revalidate` em cada mudança (webhook do projeto com os

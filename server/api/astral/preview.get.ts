@@ -1,6 +1,7 @@
 import config from "#astral/config";
 import type { PreviewResult } from "../../../shared/site/content";
 import { cms, getSite } from "../../lib/cms";
+import { liveEditAgent } from "../../lib/csp";
 import { entryView } from "../../lib/resolve";
 
 // The draft behind a preview token (the editor's "Preview" button opens
@@ -14,7 +15,7 @@ export default defineEventHandler(async (event): Promise<PreviewResult> => {
   try {
     const entry = await cms().preview(token);
     const [page, site] = await Promise.all([entryView(config, entry, entry.locale), getSite(entry.locale)]);
-    return { ok: true, page, site };
+    return { ok: true, page, site, agent: liveEditAgent() };
   } catch (error) {
     return { ok: false, problem: error instanceof Error && "code" in error ? String((error as { code: string }).code) : "preview_failed" };
   }

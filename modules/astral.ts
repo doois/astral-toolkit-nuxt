@@ -81,9 +81,10 @@ export default defineNuxtModule({
     });
 
     // Route rules: no client scripts and the Content-Security-Policy everywhere (not in `nuxt dev`, where
-    // Vite injects its own inline scripts), then the mode of each route, then the CMS redirects.
-    const headers = nuxt.options.dev ? {} : { headers: { "content-security-policy": contentSecurityPolicy() } };
-    const rules: Record<string, NitroRouteConfig> = { "/**": { noScripts: true, ...headers } as NitroRouteConfig };
+    // Vite injects its own inline scripts), then the mode of each route, then the CMS redirects. /preview alone
+    // gets the policy that lets the CMS admin frame the page and run its live edit agent.
+    const csp = (preview: boolean) => (nuxt.options.dev ? {} : { headers: { "content-security-policy": contentSecurityPolicy(preview) } });
+    const rules: Record<string, NitroRouteConfig> = { "/**": { noScripts: true, ...csp(false) } as NitroRouteConfig, "/preview": { prerender: false, ...csp(true) } };
     for (const route of routes) rules[route.rule] = { ...rules[route.rule], ...ruleOf(route) };
     for (const r of redirects) if (r.from.startsWith("/") && r.from !== r.to) rules[r.from] = { redirect: { to: r.to, statusCode: statusOf(r.status) } };
     nuxt.options.routeRules = { ...rules, ...nuxt.options.routeRules };
