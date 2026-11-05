@@ -1,6 +1,6 @@
 // The island behind <astral-live-list>: fetches the site's own JSON endpoint
 // (server/api/astral/posts.get.ts, which holds the CMS key server-side) and
-// rebuilds the cards. Under 1 kB, no framework, inlined only on pages with a
+// rebuilds the cards. Under 1 kB, no framework, loaded only on pages with a
 // live postlist (PostListBlock.vue). The server-rendered list stays as it is
 // when the fetch fails, so the page never degrades. Same markup as PostCard.vue.
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);

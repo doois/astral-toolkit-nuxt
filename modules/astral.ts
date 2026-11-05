@@ -1,9 +1,11 @@
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { addTemplate, createResolver, defineNuxtModule, extendPages, useLogger } from "nuxt/kit";
 import type { NitroRouteConfig } from "nitropack";
 import { localeFormat, type Redirect, type Schema } from "../shared/astral/index";
 import { buildRoutes, type AstralConfig, type SiteRoute } from "../shared/site/routes";
 import { cms } from "../server/lib/cms";
+import { contentSecurityPolicy } from "../server/lib/csp";
 import { env, requireEnv } from "../server/lib/env";
 import { routePaths } from "../server/lib/resolve";
 
@@ -78,8 +80,10 @@ export default defineNuxtModule({
       for (const route of routes) pages.push({ name: route.id, path: route.path, file: resolve("../app/routes/AstralRoute.vue") });
     });
 
-    // Route rules: no client scripts anywhere, then the mode of each route, then the CMS redirects.
-    const rules: Record<string, NitroRouteConfig> = { "/**": { noScripts: true } as NitroRouteConfig };
+    // Route rules: no client scripts and the Content-Security-Policy everywhere (not in `nuxt dev`, where
+    // Vite injects its own inline scripts), then the mode of each route, then the CMS redirects.
+    const headers = nuxt.options.dev ? {} : { headers: { "content-security-policy": contentSecurityPolicy() } };
+    const rules: Record<string, NitroRouteConfig> = { "/**": { noScripts: true, ...headers } as NitroRouteConfig };
     for (const route of routes) rules[route.rule] = { ...rules[route.rule], ...ruleOf(route) };
     for (const r of redirects) if (r.from.startsWith("/") && r.from !== r.to) rules[r.from] = { redirect: { to: r.to, statusCode: statusOf(r.status) } };
     nuxt.options.routeRules = { ...rules, ...nuxt.options.routeRules };
@@ -93,6 +97,14 @@ export default defineNuxtModule({
         logger.info(`${nitro.prerender.routes.length} caminhos para pré-renderizar`);
       });
     }
+
+    // A static host (`npm run generate` on Cloudflare Pages, Netlify) reads its headers from this file. The
+    // policy depends on the environment, so it is written here and not kept in public/. A public/_headers is kept.
+    nuxt.hook("nitro:build:public-assets", (nitro) => {
+      const file = join(nitro.options.output.publicDir, "_headers");
+      const own = existsSync(file) ? `${readFileSync(file, "utf8").trimEnd()}\n\n` : "";
+      writeFileSync(file, `${own}/*\n  Content-Security-Policy: ${contentSecurityPolicy()}\n`);
+    });
 
     const summary = schema.types.filter((t) => t.urlPattern).map((t) => `${t.apiId}: ${t.render ?? "static"}`).join(", ");
     logger.info(`${routes.length} rotas de ${format.locales.join(", ")} (${format.mode}); ${summary}; ${redirects.length} redirecionamentos`);

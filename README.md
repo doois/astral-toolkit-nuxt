@@ -24,7 +24,7 @@ marcação de cada bloco). Muda só a forma idiomática de cada framework.
 | `app/components/` | `SiteDocument.vue` (head, cabeçalho, rodapé), `SiteHeader.vue`, `SiteFooter.vue`, `CmsImage.vue`, `PostCard.vue`, `PagePagination.vue`, `CmsIcon.vue`, `JsonLd.vue` |
 | `app/pages/preview.vue`, `app/error.vue` | Pré-visualização e 404 |
 | `app/assets/styles/` | Tokens, base, layout e blocos, em CSS puro (os mesmos arquivos do Astro), mais `nuxt.css` |
-| `server/lib/` | `cms.ts` (leituras do CMS com memo e tags), `resolve.ts`, `memo.ts`, `env.ts` |
+| `server/lib/` | `cms.ts` (leituras do CMS com memo e tags), `resolve.ts`, `memo.ts`, `env.ts`, `csp.ts` |
 | `server/api/astral/` | `page`, `site`, `preview`, `posts` (dados das páginas e da ilha) e `revalidate` (webhook) |
 | `server/routes/` | `sitemap.xml` e `robots.txt` |
 | `server/utils/page-cache.ts` | Purga das páginas `revalidate` no cache do Nitro |
@@ -43,6 +43,7 @@ Copie `.env.example` para `.env` e preencha (nunca versione o `.env`):
 | `ASTRAL_TOKEN` | Chave de leitura (`cms_xxxxxxxx_...`), com `entries:*:read`, `entries:*:preview` e `media.read` |
 | `ASTRAL_WEBHOOK_SECRET` | Segredo do webhook do projeto que aponta para `<site>/api/astral/revalidate` |
 | `ASTRAL_BUILD_WEBHOOK_ID` | Opcional: id desse webhook, para o build reportar o status ao CMS |
+| `ASTRAL_MEDIA_URL` | Opcional: host de mídia do CMS (o `MEDIA_URL` dele, como `https://cms-media.doois.com.br`), para a Content-Security-Policy; veja "Segurança" |
 | `SITE_URL` | Endereço público do site |
 | `ASTRAL_REBUILD_HOOK` | Opcional: URL chamada (POST) quando o site precisa ser reconstruído |
 | `ASTRAL_LOCALE_URLS` | Opcional: formato das URLs por idioma enquanto o `/schema` não entregar `localeUrls` (`prefix`, `prefix-all`, `domain`, `none`) |
@@ -140,11 +141,43 @@ passar o mouse.
 
 A única parte interativa é a ilha do bloco `postlist` com `live: true`: a lista vem do
 servidor no HTML e um elemento `<astral-live-list>` de menos de 1 kB
-(`app/assets/live-list.js`, embutido só nas páginas que têm o bloco) busca a versão
+(`public/live-list.js`, carregado só nas páginas que têm o bloco) busca a versão
 atual em `/api/astral/posts`, que guarda a chave do CMS no servidor. Se a busca falhar,
 a lista do servidor fica como está. Não há Vue no navegador para isso: uma ilha Vue
 (`<NuxtIsland>` ou componente `.client`) traria o runtime inteiro (mais de 70 kB),
 acima do orçamento de 30 kB do contrato.
+
+## Segurança: Content-Security-Policy
+
+`server/lib/csp.ts` monta a política e `modules/astral.ts` a transforma numa route rule de
+`/**`, que o Nitro aplica a tudo o que ele serve: páginas pré-renderadas, páginas em cache
+(`swr`), SSR, 404 e pré-visualização. O `npm run generate` e o `npm run build` gravam também
+`.output/public/_headers` para hospedagens estáticas (Cloudflare Pages, Netlify), somado a
+um `public/_headers` se existir. Em outro host, copie o valor desse arquivo: no nginx,
+`add_header Content-Security-Policy "<valor>" always;`. O valor é decidido no build, então
+`ASTRAL_MEDIA_URL` precisa estar no build. Não vale no `npm run dev` (o Vite injeta scripts inline).
+
+```
+default-src 'self'; script-src 'self' 'inline-speculation-rules'; style-src 'self' 'unsafe-inline';
+img-src 'self' data: <ASTRAL_URL> <ASTRAL_MEDIA_URL ou https:>; font-src 'self';
+connect-src 'self' <ASTRAL_URL>; form-action 'self'; frame-ancestors 'self';
+base-uri 'self'; object-src 'none'
+```
+
+- O `noScripts` tira o payload inline e o runtime, então não há JavaScript inline para liberar.
+  A única diferença para os outros toolkits é `'inline-speculation-rules'`: o
+  `<script type="speculationrules">` é JSON, mas o navegador o confere contra o `script-src`.
+  Essa palavra libera só isso; não libera JavaScript inline. Navegadores sem speculation rules
+  a ignoram.
+- A ilha é um arquivo em `public/`, e não um import, porque com `noScripts` o build do cliente
+  não emite nada para estes componentes. Um bloco novo com JavaScript faz o mesmo, nunca
+  `innerHTML` em `useHead` nem `onclick`.
+- As imagens vêm do CMS, mas a API não diz qual é o host de mídia. Com `ASTRAL_MEDIA_URL`
+  o `img-src` fica fechado nele; sem ela, aceita qualquer `https:` para não quebrar imagem.
+  Num CMS sem `MEDIA_URL`, repita o valor de `ASTRAL_URL` para fechar. Imagens externas em
+  campos `richtext` (o CMS permite qualquer `src` http/https) só carregam com a variável vazia.
+- Vídeos do YouTube ou Vimeo (`frame-src`), `<video>` do CMS (`media-src`) e serviços de
+  terceiros (analytics, mapas) precisam da origem acrescentada em `server/lib/csp.ts`.
 
 ## Revalidação, purga e rebuild
 
@@ -198,7 +231,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --ignore-scripts
 COPY . .
-ARG ASTRAL_URL ASTRAL_PROJECT ASTRAL_TOKEN ASTRAL_WEBHOOK_SECRET ASTRAL_BUILD_WEBHOOK_ID SITE_URL
+ARG ASTRAL_URL ASTRAL_MEDIA_URL ASTRAL_PROJECT ASTRAL_TOKEN ASTRAL_WEBHOOK_SECRET ASTRAL_BUILD_WEBHOOK_ID SITE_URL
 RUN npm run build
 
 FROM node:22-alpine

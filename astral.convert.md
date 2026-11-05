@@ -103,7 +103,7 @@ Then `import PricingBlock from "./PricingBlock.vue";` and `pricing: PricingBlock
 
 Do not touch: `shared/astral/` (the client, synced from the CMS), `shared/site/routes.ts`,
 `shared/site/content.ts`, `modules/`, `app/routes/`, `app/pages/`, `app/error.vue`,
-`app/app.vue`, `app/composables/`, `app/assets/live-list.js`, `app/components/CmsImage.vue`,
+`app/app.vue`, `app/composables/`, `public/live-list.js`, `app/components/CmsImage.vue`,
 `app/components/JsonLd.vue`, `server/` (data, cache, revalidation, sitemap, robots),
 `scripts/`, `package.json`, `package-lock.json`, `tsconfig.json`, `lighthouserc.json`,
 `.github/`, `.env`, `.env.example`.
@@ -112,3 +112,7 @@ Do not touch: `shared/astral/` (the client, synced from the CMS), `shared/site/r
 
 Class names are shared by every Astral toolkit (see `DESIGN.md` in the Astro
 toolkit); keep them when restyling. No em dashes in UI text.
+
+The Content-Security-Policy (`server/lib/csp.ts`) allows no inline JavaScript: no
+`innerHTML` scripts in `useHead`, no `onclick`, no third-party origins unless
+added there. Styles may be inline.

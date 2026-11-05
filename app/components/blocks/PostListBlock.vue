@@ -3,12 +3,14 @@
 // With `live`, the server-rendered list is also an island: a tiny custom element
 // fetches /api/astral/posts in the browser and replaces the cards, so a static
 // page shows new posts before the next build. It is the only JavaScript the
-// toolkit ships, inlined only on pages with a live list.
+// toolkit ships, only on pages with a live list, and it is a file in public/: an
+// inline script would need 'unsafe-inline' in script-src (server/lib/csp.ts), and
+// an import would not reach the browser (with noScripts, the client build emits
+// nothing for these components).
 import type { Block } from "#shared/astral/index";
 import type { Link, Post } from "#shared/site/content";
 import { t } from "#shared/site/i18n";
 import PostCard from "../PostCard.vue";
-import liveList from "../../assets/live-list.js?raw";
 
 const props = defineProps<{ block: Block<{ title: string | null; text: string | null; limit: number | null; category: string | null; live: boolean | null; link: Link | null }>; locale: string; index: number; posts: Post[] }>();
 const ui = t(props.locale);
@@ -18,7 +20,7 @@ const heading = props.index === 0 ? "h1" : "h2";
 const live = props.block.live === true;
 const liveUrl = live ? `/api/astral/posts?${new URLSearchParams({ locale: props.locale, limit: String(limit), ...(category ? { category } : {}) })}` : null;
 
-if (live) useHead({ script: [{ key: "astral-live-list", type: "module", innerHTML: liveList, tagPosition: "bodyClose" }] });
+if (live) useHead({ script: [{ key: "astral-live-list", type: "module", src: "/live-list.js", tagPosition: "bodyClose" }] });
 </script>
 
 <template>
